@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Futuristic Laptop Power Monitor</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>FUTURISTIC LAPTOP POWER MONITOR</h1>
+      <div class="mode-toggle">
+        <span id="mode-label">Mode: Simulated 5-Day Monitoring</span>
+        <button id="toggle-mode">SWITCH MODE</button>
+      </div>
+    </header>
+
+    <section class="summary">
+      <div class="card">
+        <div class="card-title">ENERGY (SESSION)</div>
+        <div class="card-value" id="energy-val">-- Wh</div>
+      </div>
+      <div class="card">
+        <div class="card-title">AVERAGE POWER</div>
+        <div class="card-value" id="power-val">-- W</div>
+      </div>
+      <div class="card">
+        <div class="card-title">AVERAGE CPU LOAD</div>
+        <div class="card-value" id="cpu-val">-- %</div>
+      </div>
+      <div class="card">
+        <div class="card-title">CO₂ EMISSION</div>
+        <div class="card-value" id="co2-val">-- kg</div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <label for="minutes">Live window (minutes):</label>
+      <select id="minutes">
+        <option value="10">10</option>
+        <option value="30">30</option>
+        <option value="60" selected>60</option>
+      </select>
+      <small>Note: Time axis uses generic samples instead of real timestamps.</small>
+    </section>
+
+    <section class="charts">
+      <div class="chart-card">
+        <h2>POWER TREND</h2>
+        <canvas id="powerChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>CUMULATIVE ENERGY</h2>
+        <canvas id="energyChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>CPU UTILIZATION</h2>
+        <canvas id="cpuChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>BRIGHTNESS LEVEL</h2>
+        <canvas id="brightnessChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>POWER DISTRIBUTION</h2>
+        <canvas id="distChart"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let currentMode = 'sim';
+    let powerChart, energyChart, cpuChart, brightnessChart, distChart;
+
+    const modeLabel = document.getElementById('mode-label');
+    const toggleBtn = document.getElementById('toggle-mode');
+    const minutesSelect = document.getElementById('minutes');
+
+    toggleBtn.addEventListener('click', () => {
+      currentMode = currentMode === 'sim' ? 'live' : 'sim';
+      modeLabel.textContent =
+        currentMode === 'sim'
+          ? 'Mode: Simulated 5-Day Monitoring'
+          : 'Mode: Live Laptop Monitoring';
+      fetchSummaryAndData();
+    });
+
+    minutesSelect.addEventListener('change', () => {
+      if (currentMode === 'live') fetchSummaryAndData();
+    });
+
+    async function fetchSummaryAndData() {
+      const minutes = minutesSelect.value;
+      const summaryRes = await fetch(`/api/summary?mode=${currentMode}&minutes=${minutes}`);
+      const summary = await summaryRes.json();
+
+      document.getElementById('energy-val').textContent = summary.energy_Wh + ' Wh';
+      document.getElementById('power-val').textContent = summary.avg_power_W + ' W';
+      document.getElementById('cpu-val').textContent = summary.avg_cpu + ' %';
+      document.getElementById('co2-val').textContent = summary.co2_kg + ' kg';
+
+      const dataRes = await fetch(`/api/data?mode=${currentMode}&minutes=${minutes}`);
+      const rows = await dataRes.json();
+
+      // ✅ Sampling to prevent browser freeze
+      const step = currentMode === 'sim' ? Math.ceil(rows.length / 1000) : 1;
+      const sampled = rows.filter((_, i) => i % step === 0);
+
+      const labels = sampled.map(r => r.index);
+      const power = sampled.map(r => r.power_W);
+      const energy = sampled.map(r => r.energy_Wh_cum);
+      const cpu = sampled.map(r => r.cpu_util);
+      const brightness = sampled.map(r => r.brightness);
+
+      const buckets = [0, 0, 0, 0];
+      power.forEach(p => {
+        if (p < 20) buckets[0]++;
+        else if (p < 40) buckets[1]++;
+        else if (p < 60) buckets[2]++;
+        else buckets[3]++;
+      });
+
+      renderCharts(labels, power, energy, cpu, brightness, buckets);
+    }
+
+    function renderCharts(labels, power, energy, cpu, brightness, buckets) {
+      if (powerChart) powerChart.destroy();
+      if (energyChart) energyChart.destroy();
+      if (cpuChart) cpuChart.destroy();
+      if (brightnessChart) brightnessChart.destroy();
+      if (distChart) distChart.destroy();
+
+      const neon = '#00ffc6';
+      const glow = 'rgba(0,255,198,0.25)';
+
+      const commonOptions = {
+        responsive: true,
+        animation: false,
+        scales: {
+          x: { title: { display: true, text: 'Sample Index', color: '#e4f5ff' }, ticks: { color: '#9fe' } },
+          y: { beginAtZero: true, ticks: { color: '#9fe' } }
+        },
+        plugins: {
+          legend: { labels: { color: '#e4f5ff' } }
+        }
+      };
+
+      powerChart = new Chart(document.getElementById('powerChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Power (W)',
+            data: power,
+            borderColor: neon,
+            backgroundColor: glow,
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: commonOptions
+      });
+
+      energyChart = new Chart(document.getElementById('energyChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Energy (Wh)',
+            data: energy,
+            borderColor: '#00bfff',
+            backgroundColor: 'rgba(0,191,255,0.25)',
+            borderWidth: 2,
+            fill: true,
+            pointRadius: 0
+          }]
+        },
+        options: commonOptions
+      });
+
+      cpuChart = new Chart(document.getElementById('cpuChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'CPU (%)',
+            data: cpu,
+            borderColor: '#ffaa00',
+            backgroundColor: 'rgba(255,170,0,0.25)',
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: commonOptions
+      });
+
+      brightnessChart = new Chart(document.getElementById('brightnessChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Brightness (%)',
+            data: brightness,
+            borderColor: '#00aaff',
+            backgroundColor: 'rgba(0,170,255,0.25)',
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: commonOptions
+      });
+
+      distChart = new Chart(document.getElementById('distChart'), {
+        type: 'bar',
+        data: {
+          labels: ['0–20 W','20–40 W','40–60 W','>60 W'],
+          datasets: [{
+            label: 'Sample Count',
+            data: buckets,
+            backgroundColor: glow,
+            borderColor: neon,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: 'Power Range', color: '#e4f5ff' }, ticks: { color: '#9fe' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Count', color: '#e4f5ff' }, ticks: { color: '#9fe' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#e4f5ff' } }
+          }
+        }
+      });
+    }
+
+    fetchSummaryAndData();
+    setInterval(fetchSummaryAndData, 4000);
+  </script>
+</body>
+</html>

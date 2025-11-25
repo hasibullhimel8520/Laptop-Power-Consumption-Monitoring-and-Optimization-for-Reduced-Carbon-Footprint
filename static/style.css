@@ -1,0 +1,130 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #122644 0, #050814 60%, #020308 100%);
+  color: #e4f5ff;
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+h1 {
+  font-size: 1.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+#toggle-mode {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #00ffc6;
+  background: transparent;
+  color: #00ffc6;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+#toggle-mode:hover {
+  background: rgba(0,255,198,0.1);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0,255,198,0.05), rgba(0,180,255,0.02));
+  border: 1px solid rgba(0,255,198,0.3);
+  box-shadow: 0 0 10px rgba(0,255,198,0.2);
+}
+
+.card-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.card-value {
+  margin-top: 6px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.controls select {
+  background: #050814;
+  color: #e4f5ff;
+  border-radius: 999px;
+  border: 1px solid rgba(0,255,198,0.4);
+  padding: 4px 10px;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chart-card {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(5, 11, 30, 0.96);
+  border: 1px solid rgba(0, 180, 255, 0.4);
+  box-shadow: 0 0 18px rgba(0, 180, 255, 0.25);
+}
+
+.chart-card h2 {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+canvas {
+  width: 100% !important;
+  height: 260px !important;
+}
+
+@media (max-width: 900px) {
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}
